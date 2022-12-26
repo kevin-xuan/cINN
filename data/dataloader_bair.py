@@ -7,21 +7,21 @@ class Dataset(torch.utils.data.Dataset):
 
     def __init__(self, opt, mode):
         self.data_path = opt.Data['data_path']
-        self.mode = mode
-        self.seq_length = opt.Data['sequence_length']
-        self.do_aug = opt.Data['aug']
+        self.mode = mode  # train or eval
+        self.seq_length = opt.Data['sequence_length']  # * why 17? 第一帧x0用于与z一起生成v,目的是预测接下来的16帧,所以是17
+        self.do_aug = opt.Data['aug']  # True
 
         print(f"Setup dataloder {mode}")
         self.videos = []
         videos = os.listdir(self.data_path + mode + '/')
-        for vid in videos:
-            subvideos = os.listdir(self.data_path + mode + '/' + vid + '/')
+        for vid in videos:  # e.g., traj_0_to_255
+            subvideos = os.listdir(self.data_path + mode + '/' + vid + '/')  # [1, 256]
             for svid in subvideos:
                 self.videos.append(mode + '/' + vid + '/' + svid + '/')
 
         self.length = len(self.videos)
 
-        if mode == 'train' and self.do_aug:
+        if mode == 'train' and self.do_aug:  # train data需要增强
             self.aug = Augmentation(opt.Data['img_size'], opt.Data.Augmentation)
         else:
             self.aug = torch.nn.Sequential(

@@ -26,8 +26,8 @@ class Augmentation_random_crop(nn.Module):
 class Augmentation(nn.Module):
     def __init__(self, img_size, params):
         super(Augmentation, self).__init__()
-        self.img_size = img_size
-        self.resize = k.Resize(size=(self.img_size, self.img_size))
+        self.img_size = img_size  # 64
+        self.resize = k.Resize(size=(self.img_size, self.img_size))  
         self.jit = k.augmentation.ColorJitter(brightness=params['brightness'], contrast=params['contrast'],
                                               saturation=params['saturation'], hue=params['hue'], same_on_batch=True)
         self.normalize = k.augmentation.Normalize(0.5, 0.5)

@@ -1,0 +1,51 @@
+Flow:
+  n_flows: 20
+  flow_hidden_depth: 2
+  flow_mid_channels_factor: 8
+
+Conditioning_Model:
+  z_dim: 64
+  checkpoint_name: "encoder_stage2"
+  model_name: "stage2"
+  model_path: models/rlbench/ # 'path_AE_conditioning'
+
+First_stage_model:
+  checkpoint_encoder: encoder # 'best_PFVD_ENC'
+  checkpoint_decoder: decoder # 'best_PFVD_GEN'
+  model_name: "stage1"
+  model_path: "models/rlbench/" # 'path_stage1'
+
+Training:
+  n_epochs: 31
+  lr: 1e-5
+  workers: 30 # 30
+  bs: 50
+  bs_eval: 10
+  control: False
+  verbose_idx: 30
+  weight_decay: 0
+  gamma: 0.5
+  step_size: 7
+  beta1: 0.9
+  beta2: 0.99
+  amsgrad: True
+  savename: "cINN" #'INSERT_NAME_HERE'
+  save_path: "run/rlbench" #'INSERT_PATH_HERE'
+
+Data:
+  sequence_length: 17
+  img_size: 64
+  dataset: "RLBench" # "BAIR"
+  aug: False
+  data_path: "datasets/rlbench/packaged/dataset/" # "datasets/bair/processed_data/" # 'INSERT_DATA_PATH_HERE'
+  Augmentation:
+    brightness: 0.1
+    contrast: 0.1
+    saturation: 0.1
+    hue: 0
+    prob_hflip: 0.5
+
+Logging:
+  entity: "raoxuanzzz"
+  project: "cINN_RLBench"
+  mode: "online"

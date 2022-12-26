@@ -21,15 +21,15 @@ Training:
   weight_decay: 0
   workers: 30
   pretrain: 20
-  savename: 'INSERT_NAME_HERE'
-  save_path: 'INSERT_PATH_HERE'
+  savename: AE # "INSERT_NAME_HERE"
+  save_path: "run/bair" # "INSERT_PATH_HERE"
 
 Data:
   sequence_length: 1
   img_size: 64
-  dataset: 'BAIR'
+  dataset: "BAIR"
   aug: True
-  data_path: 'INSERT_DATA_PATH_HERE'
+  data_path: "datasets/bair/processed_data/" # "INSERT_DATA_PATH_HERE"
   Augmentation:
     brightness: 0.2
     contrast: 0.2
@@ -38,7 +38,7 @@ Data:
     prob_hflip: 0.5
 
 Logging:
-  entity: 'INSERT_WANDB_NAME'
-  project: "INSERT_PROJECT_NAME"
-  mode: 'online'
+  entity: "raoxuanzzz"
+  project: "cINN_stage2_AE"
+  mode: "offline" # 'online'
 

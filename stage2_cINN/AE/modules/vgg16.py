@@ -23,29 +23,29 @@ class vgg16(torch.nn.Module):
             self.slice4.add_module(str(x), vgg_pretrained_features[x])
         for x in range(23, 30):
             self.slice5.add_module(str(x), vgg_pretrained_features[x])
-        if not requires_grad:
+        if not requires_grad:  # True
             for param in self.parameters():
                 param.requires_grad = False
 
-    def forward(self, X):
-        h = self.slice1(X)
-        h_relu1_2 = h
-        h = self.slice2(h)
-        h_relu2_2 = h
+    def forward(self, X):  # (bs, 3, 64, 64)
+        h = self.slice1(X)  
+        h_relu1_2 = h  # (bs, 64, 64, 64)
+        h = self.slice2(h)  
+        h_relu2_2 = h  # (bs, 128, 32, 32)
         h = self.slice3(h)
-        h_relu3_3 = h
+        h_relu3_3 = h  # (bs, 256, 16, 16)
         h = self.slice4(h)
-        h_relu4_3 = h
+        h_relu4_3 = h  # (bs, 512, 8, 8)
         h = self.slice5(h)
-        h_relu5_3 = h
+        h_relu5_3 = h  # (bs, 512, 4, 4)
         vgg_outputs = namedtuple("VggOutputs", ['relu1_2', 'relu2_2', 'relu3_3', 'relu4_3', 'relu5_3'])
         out = vgg_outputs(h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3, h_relu5_3)
         return out
 
 
-def normalize_tensor(x,eps=1e-10):
+def normalize_tensor(x, eps=1e-10):  # L2 normalization
     norm_factor = torch.sqrt(torch.sum(x**2,dim=1,keepdim=True))
-    return x/(norm_factor+eps)
+    return x / (norm_factor + eps)
 
 
 def spatial_average(x, keepdim=True):

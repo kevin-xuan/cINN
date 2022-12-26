@@ -5,7 +5,10 @@ import argparse, torchvision
 from datetime import datetime
 import wandb
 from omegaconf import OmegaConf
-
+import sys
+sys.path.insert(0, '.')
+import warnings
+warnings.filterwarnings("ignore")
 import stage2_cINN.AE.modules.AE as BigAE
 from stage2_cINN.AE.modules.loss import Loss
 from stage1_VAE.modules.patch_disc import NLayerDiscriminator
@@ -24,8 +27,8 @@ def trainer(network, disc, epoch, data_loader, optimizers, loss_func, scheduler,
     data_iter.set_description(inp_string)
     for image_idx, file_dict in enumerate(data_iter):
 
-        img = file_dict["seq"].squeeze(1).type(torch.FloatTensor).cuda()
-        img_gen, loss_recon = loss_func(img, network, disc, optimizers, epoch, logger)
+        img = file_dict["seq"].squeeze(1).type(torch.FloatTensor).cuda()  # (bs, 1, 3, 64, 64) -> (bs, 3, 64, 64),其中1指seq_len
+        img_gen, loss_recon = loss_func(img, network, disc, optimizers, epoch, logger)  # (bs, 3, 64, 64), scaler loss
 
         if image_idx % 20 == 0:
             inp_string = 'Epoch {} || Loss_recon: {}'.format(epoch, np.round(loss_recon, 3))
@@ -73,8 +76,10 @@ def validator(network, disc, epoch, data_loader, loss_func, logger, save_path):
 
 def main(opt):
     """================= Create Model, Optimizer and Scheduler =========================="""
-    network = BigAE.BigAE(opt.AE).cuda()
-    disc = NLayerDiscriminator(opt.Discriminator_Patch).cuda()
+    network = BigAE.BigAE(opt.AE).cuda()  # 一个encoder-decoder结构 生成网络
+    checkpoint_name = 'models/bair/stage2/encoder_stage2.pth'  
+    network.encoder.load_state_dict(torch.load(checkpoint_name)['state_dict'])  # TODO load pre-trained network
+    disc = NLayerDiscriminator(opt.Discriminator_Patch).cuda()  # 判别网络
 
     loss_func    = Loss(opt.Training)
     optimizer1   = torch.optim.Adam(network.parameters(), lr=opt.Training['lr'], weight_decay=opt.Training['weight_decay'])
@@ -88,9 +93,9 @@ def main(opt):
     schedulers = [scheduler1, scheduler2]
 
     """==================== Set up Dataloaders ========================"""
-    dataset       = get_loader(opt.Data['dataset'])
+    dataset =  get_loader(opt.Data['dataset'])
     train_dataset = dataset.Dataset(opt, mode='train')
-    eval_dataset  = dataset.Dataset(opt, mode='eval')
+    eval_dataset  = dataset.Dataset(opt, mode='test')  # * 默认'eval'
 
     train_data_loader = torch.utils.data.DataLoader(train_dataset, num_workers=opt.Training['workers'],
                                                     batch_size=opt.Training['bs'], shuffle=True, drop_last=True)
@@ -135,7 +140,7 @@ def main(opt):
 
     """=================== Start training ! ==========================="""
     best_val = 99
-    epoch_iterator = tqdm(range(0, opt.Training['n_epochs']), ascii=True, position=1)
+    epoch_iterator = tqdm(range(0, opt.Training['n_epochs']), ascii=True, position=1)  # 60
     for epoch in epoch_iterator:
         epoch_time = time.time()
         lr = [group['lr'] for group in optimizers[0].param_groups][0]
@@ -163,9 +168,9 @@ def main(opt):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cf", "--config", type=str, default='stage2_cINN/AE/configs/bair_config.yaml',
+    parser.add_argument("-cf", "--config", type=str, default='stage2_cINN/AE/configs/rlbench_config.yaml',
                         help="Define config file")
-    parser.add_argument("-gpu", type=str, required=True)
+    parser.add_argument("-gpu", type=str, default='1')
     args = parser.parse_args()
 
     conf = OmegaConf.load(args.config)

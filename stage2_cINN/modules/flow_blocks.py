@@ -10,36 +10,36 @@ class ConditionalFlow(nn.Module):
     def __init__(self, in_channels, embedding_dim, hidden_dim, hidden_depth,
                  n_flows, conditioning_option="none", activation='lrelu', control=False):
         super().__init__()
-        self.in_channels = in_channels
-        self.cond_channels = embedding_dim
-        self.mid_channels = hidden_dim
-        self.num_blocks = hidden_depth
-        self.n_flows = n_flows
-        self.conditioning_option = conditioning_option
+        self.in_channels = in_channels  # 64
+        self.cond_channels = embedding_dim  # 64
+        self.mid_channels = hidden_dim  # 512
+        self.num_blocks = hidden_depth  # 2
+        self.n_flows = n_flows  # 20
+        self.conditioning_option = conditioning_option  # None
 
         self.sub_layers = nn.ModuleList()
-        if self.conditioning_option.lower() != "none":
+        if self.conditioning_option.lower() != "none":  # False
             self.conditioning_layers = nn.ModuleList()
-        for fl in range(self.n_flows):
-            mode = 'cond' if (fl % 4 != 0 and control) else 'normal'
+        for fl in range(self.n_flows):  # 20
+            mode = 'cond' if (fl % 4 != 0 and control) else 'normal'  # normal
             self.sub_layers.append(ConditionalFlatDoubleCouplingFlowBlock(
                                    self.in_channels, self.cond_channels, self.mid_channels,
                                    self.num_blocks, activation=activation, mode=mode))
             if self.conditioning_option.lower() != "none":
                 self.conditioning_layers.append(nn.Conv2d(self.cond_channels, self.cond_channels, 1))
 
-    def forward(self, x, embedding, reverse=False):
+    def forward(self, x, embedding, reverse=False):  # x, embedding: (bs, 64)
         hconds = list()
-        hcond = embedding[:, :, None, None]
+        hcond = embedding[:, :, None, None]  # (bs, 64, 1, 1)
         self.last_outs = []
         self.last_logdets = []
-        for i in range(self.n_flows):
-            if self.conditioning_option.lower() == "parallel":
+        for i in range(self.n_flows):  # 20
+            if self.conditioning_option.lower() == "parallel":  # False
                 hcond = self.conditioning_layers[i](embedding[:, :, None, None])
-            elif self.conditioning_option.lower() == "sequential":
+            elif self.conditioning_option.lower() == "sequential":  # False
                 hcond = self.conditioning_layers[i](hcond)
             hconds.append(hcond)
-        if not reverse:
+        if not reverse:  # False
             logdet = 0.0
             for i in range(self.n_flows):
                 if len(x.shape) != 4:
@@ -52,7 +52,7 @@ class ConditionalFlow(nn.Module):
         else:
             for i in reversed(range(self.n_flows)):
                 if len(x.shape) != 4:
-                    x = x.unsqueeze(-1).unsqueeze(-1)
+                    x = x.unsqueeze(-1).unsqueeze(-1)  # (bs, 64) -> (bs, 64, 1, 1)
                 x = self.sub_layers[i](x, hconds[i], reverse=True)
             return x
 

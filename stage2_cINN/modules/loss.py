@@ -7,9 +7,9 @@ class FlowLoss(nn.Module):
         super().__init__()
 
     def forward(self, sample, logdet, logger, mode='eval'):
-        nll_loss = torch.mean(nll(sample))
+        nll_loss = torch.mean(nll(sample))  # (bs, 64, 1, 1) -> (bs, ) -> scaler
         assert len(logdet.shape) == 1
-        nlogdet_loss = -torch.mean(logdet)
+        nlogdet_loss = -torch.mean(logdet)  # (bs, ) -> scaler
         loss = nll_loss + nlogdet_loss
         reference_nll_loss = torch.mean(nll(torch.randn_like(sample)))
         loss_dic = {

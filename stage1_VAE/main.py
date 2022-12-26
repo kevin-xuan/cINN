@@ -6,6 +6,10 @@ from tqdm import tqdm
 import wandb
 from omegaconf import OmegaConf
 from torch.optim import lr_scheduler
+import sys
+sys.path.insert(0, '.')
+import warnings
+warnings.filterwarnings("ignore")
 
 from stage1_VAE.modules import resnet3D
 from stage1_VAE.modules import patch_disc
@@ -20,7 +24,7 @@ from data.get_dataloder import get_loader
 
 
 def trainer(opt, network, enc, disc_t, disc_s, logger, epoch, data_loader, optimizer, backward):
-    _ = network.train()
+    _ = network.train()  # network=decoder
 
     logger.reset()
     data_iter = tqdm(data_loader, ascii=True, position=2)
@@ -31,13 +35,13 @@ def trainer(opt, network, enc, disc_t, disc_s, logger, epoch, data_loader, optim
     for batch_idx, file_dict in enumerate(data_iter):
 
         ## Load data
-        seq = file_dict["seq"].type(torch.FloatTensor).cuda()
+        seq = file_dict["seq"].type(torch.FloatTensor).cuda()  # (10, 17, 3, 64, 64)
 
         ## Compute Loss
-        sequences = backward(network, enc, disc_t, disc_s, seq, optimizer, epoch, logger)
+        sequences = backward(network, enc, disc_t, disc_s, seq, optimizer, epoch, logger, file_dict)
 
         ## plot losses in console
-        if batch_idx % opt.Training['verbose_idx'] == 0 and batch_idx or batch_idx == 5:
+        if batch_idx % opt.Training['verbose_idx'] == 0 and batch_idx or batch_idx == 5:  # verbose_idx=30
             loss_log = logger.get_iteration_mean(10)
             inp_string = 'Epoch {} || percep: {} || coup_s: {} | coup_t: {}'.format(
                 epoch, np.round(loss_log[2], 2), np.round(loss_log[6], 2), np.round(loss_log[7], 2))
@@ -70,7 +74,7 @@ def validator(opt, network, enc, logger, epoch, data_loader, backward):
             seq = file_dict["seq"].type(torch.FloatTensor).cuda()
 
             ## Compute Loss
-            sequences = backward.eval(network, enc, seq, logger)
+            sequences = backward.eval(network, enc, seq, logger, file_dict)
 
             if image_idx % opt.Training['verbose_idx'] == 0 and image_idx or image_idx == 5:
                 loss_log = logger.get_iteration_mean(10)
@@ -90,9 +94,13 @@ def main(opt):
 
     """================= Create Model, Optimizer and Scheduler =========================="""
     decoder = net.Generator(opt.Decoder).cuda()
+    checkpoint_name = 'models/bair/stage1/decoder.pth'  
+    decoder.load_state_dict(torch.load(checkpoint_name)['state_dict'])  # TODO load pre-trained network
     disc_s  = patch_disc.NLayerDiscriminator(opt.Discriminator_Patch).cuda()
     disc_t  = resnet3D.Discriminator(opt.Discriminator_Temporal).cuda()
     encoder = resnet3D.Encoder(opt.Encoder).cuda()
+    checkpoint_name = 'models/bair/stage1/encoder.pth'  
+    encoder.load_state_dict(torch.load(checkpoint_name)['state_dict'])  # TODO load pre-trained network
     I3D     = FVD_logging.load_model().cuda() if opt.Training['FVD']=='FVD' else DTFVD_Score.load_model(16).cuda()
 
     backward = Backward(opt)
@@ -110,7 +118,7 @@ def main(opt):
     scheduler_2Dnet = lr_scheduler.ExponentialLR(optimizer_2Dnet, gamma=opt.Training['lr_gamma'])
 
     """====================Reload model if needed ========================"""
-    if opt.Training['reload_path']:
+    if opt.Training['reload_path']:  # False
 
         pretrained_gen = torch.load(opt.Training['reload_path'] + '/latest_checkpoint_GEN.pth')
         _ = decoder.load_state_dict(pretrained_gen['state_dict'])
@@ -146,9 +154,9 @@ def main(opt):
     print(checkpoint_info)
 
     """==================== Dataloader ========================"""
-    dataset       = get_loader(opt.Data['dataset'])
+    dataset       = get_loader(opt.Data['dataset'])  # dataset class
     train_dataset = dataset.Dataset(opt, mode='train')
-    eval_dataset  = dataset.Dataset(opt, mode='eval')
+    eval_dataset  = dataset.Dataset(opt, mode='test')  # * 默认 'eval'
 
     train_data_loader = torch.utils.data.DataLoader(train_dataset, num_workers=opt.Training['workers'],
                                                     batch_size=opt.Training['bs'], shuffle=True, drop_last=True)
@@ -196,8 +204,8 @@ def main(opt):
     full_log_test  = aux.CSVlogger(save_path + "/log_per_epoch_eval.csv", ["Epoch", "Time", "LR"] + logging_keys_test)
 
     """=================== Start training ! ==========================="""
-    epoch_iterator = tqdm(range(start_epoch, opt.Training['n_epochs']), ascii=True, position=1)
-    best_PFVD = 999
+    epoch_iterator = tqdm(range(start_epoch, opt.Training['n_epochs']), ascii=True, position=1)  # 55 epochs
+    best_PFVD = 9999  # *默认999
 
     for epoch in epoch_iterator:
         epoch_time = time.time()
@@ -247,8 +255,8 @@ def main(opt):
 """============================================"""
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cf", "--config", type=str, default='stage1_VAE/configs/bair_config.yaml', help="Define config file")
-    parser.add_argument("-gpu", type=str, required=True)
+    parser.add_argument("-cf", "--config", type=str, default='stage1_VAE/configs/rlbench_config.yaml', help="Define config file")
+    parser.add_argument("-gpu", type=str, default="1")
     args = parser.parse_args()
 
     conf = OmegaConf.load(args.config)

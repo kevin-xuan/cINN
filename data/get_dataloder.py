@@ -1,4 +1,4 @@
-from data import dataloader_bair, dataloader_bair_endpoint, dataloader_iPER, dataloader_landscape, dataloader_DTDB
+from data import dataloader_RLBench, dataloader_bair, dataloader_bair_endpoint, dataloader_iPER, dataloader_landscape, dataloader_DTDB
 
 def get_loader(name, control=False):
 
@@ -10,6 +10,8 @@ def get_loader(name, control=False):
         return dataloader_landscape
     elif name == 'DTDB' or name == 'dtdb':
         return dataloader_DTDB
+    elif name == 'RLBench':
+        return dataloader_RLBench
     else:
         raise NotImplementedError(f'Corresponding dataloader to dataset {name} not implemented')
 

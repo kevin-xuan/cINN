@@ -12,13 +12,13 @@ def get_save_dict(model, optmizer, scheduler, epoch):
     return dic
 
 ### Logging and converting of videos
-def convert_seq2gif(sequence):
+def convert_seq2gif(sequence):  # (bs, 16, 3, 64, 64)
     img_shape = sequence.shape
-    images_orig = denorm(sequence).permute(0, 1, 3, 4, 2).detach().cpu().numpy()
-    img_gif = images_orig[0]
+    images_orig = denorm(sequence).permute(0, 1, 3, 4, 2).detach().cpu().numpy()  # (bs, 16, 64, 64, 3) [0, 1]
+    img_gif = images_orig[0]  # (16, 64, 64, 3)
     for i in range(1, img_shape[0]):
         img_gif = np.concatenate((img_gif, images_orig[i]), axis=2)
-    img_gif = 255 * img_gif / np.max(img_gif)
+    img_gif = 255 * img_gif / np.max(img_gif)  # (16, 64, 64*bs, 3)
     return img_gif
 
 
@@ -66,7 +66,9 @@ def set_seed(seed):
 def evaluate_FVD_posterior(dloader, model, encoder, I3D, mode):
 
     seq_g, seq_o = [], []
-
+    # # * 自己加的
+    # seq_start, seq_end = [], []
+    
     with torch.no_grad():
         for _, file in enumerate(dloader):
             seq = file["seq"].type(torch.FloatTensor).cuda()
@@ -74,9 +76,15 @@ def evaluate_FVD_posterior(dloader, model, encoder, I3D, mode):
             seq_gen = model(seq[:, 0], motion)
             seq_g.append(seq_gen.cpu())
             seq_o.append(seq[:, 1:].cpu())
+            # # * 自己加的
+            # seq_start.append(file['start_frame'])
+            # seq_end.append(file['last_frame'])
 
     seq_gen  = torch.cat(seq_g, dim=0)
     seq_orig = torch.cat(seq_o, dim=0)
+    # # * 自己加的
+    # seq_start = torch.cat(seq_start, dim=0)
+    # seq_end = torch.cat(seq_end, dim=0)
 
     torch.cuda.empty_cache()
 
@@ -87,20 +95,30 @@ def evaluate_FVD_posterior(dloader, model, encoder, I3D, mode):
 def evaluate_FVD_prior(dloader, cINN, decoder, I3D, z_dim, opt, epoch, mode, control):
 
     seq_g, seq_o = [], []
-
+    # # * 自己加的
+    # seq_start, seq_end = [], []
+    
     with torch.no_grad():
         for _, file in enumerate(tqdm(dloader)):
             seq = file["seq"].type(torch.FloatTensor).cuda()
 
             res = torch.randn(seq.size(0), z_dim).cuda()
             cond = [seq[:, 0]] if not control else [seq[:, 0], file["cond"]]
-            z   = cINN(res, cond, reverse=True).view(seq.size(0), -1)
+            z   = cINN(res, cond, reverse=True).view(seq.size(0), -1)  # inference过程为reverse
             seq_gen = decoder(seq[:, 0], z)
             seq_g.append(seq_gen.cpu())
             seq_o.append(seq[:, 1:].cpu())
+            # # * 自己加的
+            # seq_start.append(file['start_frame'])
+            # seq_end.append(file['last_frame'])
+            # seq_gen_trunc = torch.cat([seq_gen[i, :min(last - start, 16)] for i, start, last in zip(range(seq_gen.size(0)), file_dict['start_frame'], file_dict['last_frame'])])
 
     seq_gen  = torch.cat(seq_g, dim=0)
     seq_orig = torch.cat(seq_o, dim=0)
+    
+    # # * 自己加的
+    # seq_start = torch.cat(seq_start, dim=0)
+    # seq_end = torch.cat(seq_end, dim=0)
 
     ## save some random samples
     rand_sel = np.random.randint(0, seq_gen.size(0), 10)

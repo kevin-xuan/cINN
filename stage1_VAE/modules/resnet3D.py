@@ -199,24 +199,24 @@ class Encoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def reparameterize(self, emb):
+    def reparameterize(self, emb):  # (bs, 512, 4, 4)
         mu, logvar = self.conv_mu(emb).reshape(emb.size(0), -1), self.conv_var(emb).reshape(emb.size(0), -1)
         eps = torch.FloatTensor(logvar.size()).normal_().cuda()
         std = logvar.mul(0.5).exp_()
-        return eps.mul(std).add_(mu), mu, logvar
+        return eps.mul(std).add_(mu), mu, logvar  # (bs, 64)
 
-    def forward(self, x):
+    def forward(self, x):  # (bs, 3, 16, 64, 64)
         if x.size(1) > x.size(2):
             x = x.transpose(1, 2)
-        x = self.conv1(x)
+        x = self.conv1(x)  # (bs, 64, 8, 32, 32)
         x = self.norm1(x)
         x = self.relu(x)
-        if self.use_max_pool:
+        if self.use_max_pool:  # False
             x = self.maxpool(x)
 
-        x = self.layer(x)
+        x = self.layer(x)  # (bs, 512, 1, 4, 4)
 
-        return self.reparameterize(x.squeeze(2))
+        return self.reparameterize(x.squeeze(2))  # (bs, 64)
 
 
 class Discriminator(nn.Module):
@@ -280,9 +280,9 @@ class Discriminator(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        if x.size(1) > x.size(2):
-            x = x.transpose(1, 2)
+    def forward(self, x):  # (bs, 3, T, 64, 64), T<=16
+        # if x.size(1) > x.size(2):
+        #     x = x.transpose(1, 2)
         
         x = self.conv1(x)
         x = self.norm1(x)

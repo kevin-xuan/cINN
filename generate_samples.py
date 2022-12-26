@@ -9,8 +9,8 @@ img_suffix = ['jpg', 'png', 'jpeg']
 
 # setup argparser
 parser = argparse.ArgumentParser()
-parser.add_argument('-gpu', type=str, required=True, help="Define GPU on which to run")
-parser.add_argument('-dataset', type=str, required=True, help='Specify dataset')
+parser.add_argument('-gpu', type=str, default='0', help="Define GPU on which to run")
+parser.add_argument('-dataset', type=str, default='bair', help='Specify dataset')
 parser.add_argument('-texture', type=str, help='Specify texture when using DTDB')
 parser.add_argument('-ckpt_path', type=str, required=False, help='If ckpt outside of repo')
 parser.add_argument('-seq_length', type=int, default=16)
@@ -32,32 +32,32 @@ for suffix in img_suffix:
 model = Model(ckpt_path, args.seq_length)
 
 ## Load images
-img_res = model.config.Data['img_size']
+img_res = model.config.Data['img_size']  # 64
 resize = k.Resize(size=(img_res, img_res))
 normalize = k.augmentation.Normalize(0.5, 0.5)
 
-imgs = [resize(normalize(k.image_to_tensor(cv2.cvtColor(cv2.imread(name), cv2.COLOR_BGR2RGB))/255.0))
+imgs = [resize(normalize(k.image_to_tensor(cv2.cvtColor(cv2.imread(name), cv2.COLOR_BGR2RGB))/255.0))  # [(1, 3, 64, 64), ...]
         for name in img_list]
-imgs = torch.cat(imgs)
+imgs = torch.cat(imgs)  # (10, 3, 64, 64)
 
 ## Generate videos
-bs = args.bs
-length = math.ceil(imgs.size(0)/bs)
+bs = args.bs  # 6
+length = math.ceil(imgs.size(0)/bs)  # 2
 videos = []
 with torch.no_grad():
-    for i in range(length):
+    for i in range(length):  # 2
 
         if i < (length -1):
             batch = imgs[i * bs:(i + 1) * bs].cuda()
         else:
             batch = imgs[i * bs:].cuda()
-        videos.append(model(batch).cpu())
+        videos.append(model(batch).cpu())  # (bs, 16, 3, 64, 64)
 
 videos = torch.cat(videos)
 
 ## Save video as gif
 save_path = f'./assets/results/{path_ds}/'
 os.makedirs(os.path.dirname(save_path), exist_ok=True)
-gif = aux.convert_seq2gif(videos)
+gif = aux.convert_seq2gif(videos)  # (16, 64, 64*bs, 3)
 imageio.mimsave(save_path + f'results.gif', gif.astype(np.uint8), fps=3)
 print(f'Animations saved in {save_path}')

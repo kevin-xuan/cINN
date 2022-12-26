@@ -36,7 +36,7 @@ class Norm3D(nn.Module):
 
 
 class ADAIN(nn.Module):
-    def __init__(self, num_features, z_dim):
+    def __init__(self, num_features, z_dim):  # z_dim=64
         super().__init__()
         self.num_features = num_features
         self.norm = nn.InstanceNorm3d(num_features, affine=False, track_running_stats=False)

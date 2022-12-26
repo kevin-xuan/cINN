@@ -11,17 +11,17 @@ from metrics.DTFVD import DTFVD_Score
 from utils.auxiliaries import set_seed
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-gpu', type=str, required=True, help="Define GPU on which to run")
-parser.add_argument('-dataset', type=str)
+parser.add_argument('-gpu', type=str, default='1', help="Define GPU on which to run")
+parser.add_argument('-dataset', type=str, default='bair')
 parser.add_argument('-texture', type=str, required=False, help='Specify texture when using DTDB')
 parser.add_argument('-ckpt_path', type=str, required=False, help="Specify path if outside of repo for chkpt")
-parser.add_argument('-data_path', type=str, required=False, help="Path to dataset arranged as described in readme")
+parser.add_argument('-data_path', type=str, default='datasets/bair/processed_data/', help="Path to dataset arranged as described in readme")
 parser.add_argument('-seq_length', type=int, default=16)
 parser.add_argument('-bs', type=int, default=6, help='Batchsize')
-parser.add_argument('-FID', type=bool)
-parser.add_argument('-FVD', type=bool)
-parser.add_argument('-DTFVD', type=bool)
-parser.add_argument('-LPIPS', type=bool)
+parser.add_argument('-FID', type=bool, default=False)
+parser.add_argument('-FVD', type=bool, default=True)
+parser.add_argument('-DTFVD', type=bool, default=True)
+parser.add_argument('-LPIPS', type=bool, default=False)
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -30,6 +30,7 @@ set_seed(249)
 ## Load model from config
 path_ds = f'{args.dataset}/{args.texture}/' if args.dataset == 'DTDB' else f'{args.dataset}'
 ckpt_path = f'./models/{path_ds}/stage2/' if not args.ckpt_path else args.ckpt_path
+# ckpt_path = 'run/bair/Stage2_BAIR_Date-2022-12-7-17-37-50_cINN/checkpoint_best_val.pth'
 model = Model(ckpt_path, args.seq_length)
 
 # set up dataloader

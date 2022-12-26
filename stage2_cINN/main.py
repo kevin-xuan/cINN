@@ -5,7 +5,10 @@ from omegaconf import OmegaConf
 import argparse
 from datetime import datetime
 import wandb
-
+import sys
+sys.path.insert(0, '.')
+import warnings
+warnings.filterwarnings("ignore")
 from data.get_dataloder import get_loader
 import stage2_cINN.modules.loss as loss
 import stage2_cINN.modules.INN as INN
@@ -26,11 +29,11 @@ def trainer(cINN, encoder, epoch, data_loader, logger, optimizer, loss_func, opt
     data_iter.set_description(inp_string)
     for image_idx, file_dict in enumerate(data_iter):
 
-        seq = file_dict["seq"].type(torch.FloatTensor).cuda()
+        seq = file_dict["seq"].type(torch.FloatTensor).cuda()  # (bs, 17, 3, 64, 64)
 
-        post, mean, *_ = encoder(seq[:, 1:].transpose(1, 2))
+        post, mean, *_ = encoder(seq[:, 1:].transpose(1, 2))  # post: z (bs, 64)
         cond = [seq[:, 0]] if not opt.Training['control'] else [seq[:, 0],  file_dict["cond"]]
-        gauss, logdet  = cINN(post.reshape(post.size(0), -1).detach(), cond)
+        gauss, logdet  = cINN(post.reshape(post.size(0), -1).detach(), cond)  # (bs, 64, 1, 1) (bs, )
         loss = loss_func(gauss, logdet, logger, mode='train')
 
         optimizer.zero_grad()
@@ -88,8 +91,8 @@ def main(opt):
     _ = encoder.eval()
 
     ### Create cINN
-    control_dim = 0 if not opt.Training['control'] else opt.Training['control_dim']
-    flow_mid_channels = config.Decoder["z_dim"] * opt.Flow["flow_mid_channels_factor"]
+    control_dim = 0 if not opt.Training['control'] else opt.Training['control_dim']  # 0
+    flow_mid_channels = config.Decoder["z_dim"] * opt.Flow["flow_mid_channels_factor"]  # 512
     network = INN.SupervisedTransformer(flow_in_channels=config.Decoder["z_dim"],
                                         flow_embedding_channels=opt.Conditioning_Model['z_dim'],
                                         n_flows=opt.Flow["n_flows"],
@@ -98,6 +101,8 @@ def main(opt):
                                         flow_conditioning_option="None",
                                         dic=opt.Conditioning_Model,
                                         control=opt.Training['control']).cuda()
+    # cINN_model_path = opt.First_stage_model['model_path'] + 'stage2' + '/'
+    # network.flow.load_state_dict(torch.load(cINN_model_path + 'cINN.pth')['state_dict'])
 
     ## Load Pytorch I3D for logging
     I3D     = FVD_logging.load_model().cuda() if config.Training['FVD']=='FVD' else DTFVD_Score.load_model(16).cuda()
@@ -110,11 +115,11 @@ def main(opt):
                                                 gamma=opt.Training['gamma'])
 
     """==================== Dataloader ========================"""
-    dloader = get_loader(opt.Data['dataset'], control=opt.Training['control'])
+    dloader = get_loader(opt.Data['dataset'], control=opt.Training['control'])  # dataset class
     train_dataset = dloader.Dataset(opt, mode='train')
     train_data_loader = torch.utils.data.DataLoader(train_dataset, num_workers=opt.Training['workers'],
                                                     batch_size=opt.Training['bs'], shuffle=True)
-    eval_dataset = dloader.Dataset(opt, mode='eval')
+    eval_dataset = dloader.Dataset(opt, mode='test')  # * 默认 'eval'
     eval_data_loader = torch.utils.data.DataLoader(eval_dataset, num_workers=opt.Training['workers'],
                                                    batch_size=opt.Training['bs_eval'], shuffle=True)
 
@@ -157,8 +162,8 @@ def main(opt):
     full_log_eval = aux.CSVlogger(save_path + "/log_per_epoch_eval.csv", ["Epoch", "Time", "LR"] + logging_keys)
 
     """=================== Start training ! ==========================="""
-    epoch_iterator = tqdm(range(0, opt.Training['n_epochs']), ascii=True, position=1)
-    best_PFVD = 999
+    epoch_iterator = tqdm(range(0, opt.Training['n_epochs']), ascii=True, position=1)  # n_epochs=31
+    best_PFVD = 9999  # * 默认999
 
     for epoch in epoch_iterator:
         epoch_time = time.time()
@@ -179,10 +184,13 @@ def main(opt):
         wandb.log({'FVD': PFVD})
 
         ## Save checkpoints
+        save_dict = {'state_dict': network.flow.state_dict()}
         if PFVD < best_PFVD:
             torch.save(save_dict, save_path + '/checkpoint_best_val.pth')
             best_PFVD = PFVD
 
+        torch.save(save_dict, save_path + '/latest_checkpoint_cINN.pth')
+        
         ###### Logging Epoch Data
         epoch_time = time.time() - epoch_time
         full_log_train.write([epoch, epoch_time, lr, *loss_track_train.log(), PFVD])
@@ -195,8 +203,8 @@ def main(opt):
 ### Start Training ###
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cf", "--config", type=str, required=True, help="Define config file")
-    parser.add_argument("-gpu", type=str, required=True)
+    parser.add_argument("-cf", "--config", type=str, default='stage2_cINN/configs/rlbench_config.yaml', help="Define config file")
+    parser.add_argument("-gpu", type=str, default='1')
     args = parser.parse_args()
 
     conf = OmegaConf.load(args.config)

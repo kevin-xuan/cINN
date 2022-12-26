@@ -82,10 +82,10 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
         covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
 
     # Numerical error might give slight imaginary component
-    if np.iscomplexobj(covmean):
-        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
-            m = np.max(np.abs(covmean.imag))
-            raise ValueError('Imaginary component {}'.format(m))
+    if np.iscomplexobj(covmean):  # * 改了
+        # if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+        #     m = np.max(np.abs(covmean.imag))
+        #     raise ValueError('Imaginary component {}'.format(m))
         covmean = covmean.real
 
     tr_covmean = np.trace(covmean)
@@ -149,7 +149,7 @@ def get_activations(data, model, batch_size=50, cuda=False, verbose=False):
     return pred_arr
 
 
-def calculate_activation_statistics(data, model, batch_size=50, cuda=True, verbose=False):
+def calculate_activation_statistics(data, model, batch_size=50, cuda=True, verbose=False, data_start=None, data_end=None):
     """Calculation of the statistics used by the FID.
     Params:
     -- files       : List of image files paths

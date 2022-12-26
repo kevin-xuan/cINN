@@ -5,15 +5,15 @@ Flow:
 
 Conditioning_Model:
   z_dim: 64
-  checkpoint_name: 'Encoder_stage2'
-  model_name: 'save_name_AE_conditioning/'
-  model_path: 'path_AE_conditioning'
+  checkpoint_name: "encoder_stage2"
+  model_name: "stage2"
+  model_path: models/bair/ # 'path_AE_conditioning'
 
 First_stage_model:
-  checkpoint_encoder: 'best_PFVD_ENC'
-  checkpoint_decoder: 'best_PFVD_GEN'
-  model_name: 'save_name_stage1/'
-  model_path: 'path_stage1'
+  checkpoint_encoder: encoder # 'best_PFVD_ENC'
+  checkpoint_decoder: decoder # 'best_PFVD_GEN'
+  model_name: "stage1"
+  model_path: "models/bair/" # 'path_stage1'
 
 Training:
   n_epochs: 31
@@ -29,15 +29,15 @@ Training:
   beta1: 0.9
   beta2: 0.99
   amsgrad: True
-  savename: 'INSERT_NAME_HERE'
-  save_path: 'INSERT_PATH_HERE'
+  savename: "cINN" #'INSERT_NAME_HERE'
+  save_path: "run/bair" #'INSERT_PATH_HERE'
 
 Data:
   sequence_length: 17
   img_size: 64
-  dataset: 'BAIR'
+  dataset: "BAIR"
   aug: True
-  data_path: 'INSERT_DATA_PATH_HERE'
+  data_path: "datasets/bair/processed_data/" # 'INSERT_DATA_PATH_HERE'
   Augmentation:
     brightness: 0.1
     contrast: 0.1
@@ -46,6 +46,6 @@ Data:
     prob_hflip: 0.5
 
 Logging:
-  entity: 'INSERT_WANDB_NAME'
-  project: "INSERT_PROJECT_NAME"
-  mode: 'online'
+  entity: "raoxuanzzz"
+  project: "cINN"
+  mode: "online"

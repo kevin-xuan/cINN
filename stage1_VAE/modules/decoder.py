@@ -8,8 +8,8 @@ class GeneratorBlock(nn.Module):
 
     def __init__(self, n_in, n_out, use_spectral, z_dim):
         super().__init__()
-        self.learned_shortcut = (n_in != n_out)
-        n_middle = min(n_in, n_out)
+        self.learned_shortcut = (n_in != n_out)  # False or True
+        n_middle = min(n_in, n_out)  # n_out
 
         self.conv_0 = nn.Conv3d(n_in, n_middle, 3, 1, 1)
         self.conv_1 = nn.Conv3d(n_middle, n_out, 3, 1, 1)
@@ -17,7 +17,7 @@ class GeneratorBlock(nn.Module):
         if self.learned_shortcut:
             self.conv_s = nn.Conv3d(n_in, n_out, 1, bias=False)
 
-        if use_spectral:
+        if use_spectral:  # True
             self.conv_0 = spectral_norm(self.conv_0)
             self.conv_1 = spectral_norm(self.conv_1)
 
@@ -25,7 +25,7 @@ class GeneratorBlock(nn.Module):
                 self.conv_s = spectral_norm(self.conv_s)
 
         self.norm_0 = Spade(n_in)
-        self.norm_1 = ADAIN(n_middle, z_dim)
+        self.norm_1 = ADAIN(n_middle, z_dim)  # z_dim=64
 
         if self.learned_shortcut:
             self.norm_s = Norm3D(n_in)
@@ -56,20 +56,20 @@ class Generator(nn.Module):
     def __init__(self, dic):
         super().__init__()
 
-        nf = dic['channel_factor']
-        self.z_dim = dic['z_dim']
-        self.fmap_start = 16*nf
+        nf = dic['channel_factor']  # 64
+        self.z_dim = dic['z_dim']  # 64
+        self.fmap_start = 16*nf  # 1024
 
-        self.fc = nn.Linear(dic['z_dim'], 4*4*16*nf)
+        self.fc = nn.Linear(dic['z_dim'], 4*4*16*nf)  # Linear(64, 16384)
 
-        use_spectral = dic["spectral_norm"]
-        self.upsample_s = dic["upsample_s"]
-        self.upsample_t = dic["upsample_t"]
+        use_spectral = dic["spectral_norm"]  # True
+        self.upsample_s = dic["upsample_s"]  # [2, 1]
+        self.upsample_t = dic["upsample_t"]  # [2, 1]
 
-        self.fc = nn.Linear(self.z_dim, 4*4*16*nf)
+        self.fc = nn.Linear(self.z_dim, 4*4*16*nf)  # Linear(64, 16384), 为什么2个fc?
         self.head_0 = GeneratorBlock(16*nf, 16*nf, use_spectral, self.z_dim)
 
-        self.fc = nn.Linear(self.z_dim, 4*4*16*nf)
+        self.fc = nn.Linear(self.z_dim, 4*4*16*nf)  # why, 第三次了?
         self.head_0 = GeneratorBlock(16*nf, 16*nf, use_spectral, self.z_dim)
 
         self.g_0 = GeneratorBlock(16*nf, 16*nf, use_spectral, self.z_dim)
@@ -94,27 +94,27 @@ class Generator(nn.Module):
         for _, m in enumerate(self.modules()):
             self.weight_init(m)
 
-    def forward(self, img, motion):
+    def forward(self, img, motion):  # img: (bs, 3, 64, 64), motion (z): (bs, 64), e.g., bs=6
 
-        x = self.fc(motion).reshape(img.size(0), -1, 1, 4, 4)
-        x = self.head_0(x, motion, img)
+        x = self.fc(motion).reshape(img.size(0), -1, 1, 4, 4)  # (6, 1024, 1, 4, 4)
+        x = self.head_0(x, motion, img)  # (6, 1024, 1, 4, 4)
 
-        x = F.interpolate(x, scale_factor=2)
+        x = F.interpolate(x, scale_factor=2)  # (6, 1024, 2, 8, 8)
         x = self.g_0(x, motion, img)
 
-        x = F.interpolate(x, scale_factor=2)
-        x = self.g_1(x, motion, img)
+        x = F.interpolate(x, scale_factor=2)  # (6, 1024, 4, 16, 16)
+        x = self.g_1(x, motion, img)  # (6, 512, 4, 16, 16)
 
-        x = F.interpolate(x, scale_factor=2)
-        x = self.g_2(x, motion, img)
+        x = F.interpolate(x, scale_factor=2)  # (6, 512, 8, 32, 32)
+        x = self.g_2(x, motion, img)  # (6, 256, 8, 32, 32)
 
-        x = F.interpolate(x, scale_factor=(self.upsample_t[0], self.upsample_s[0], self.upsample_s[0]))
-        x = self.g_3(x, motion, img)
+        x = F.interpolate(x, scale_factor=(self.upsample_t[0], self.upsample_s[0], self.upsample_s[0]))  # (6, 256, 16, 64, 64)
+        x = self.g_3(x, motion, img)  # (6, 128, 16, 64, 64)
 
         x = F.interpolate(x, scale_factor=(self.upsample_t[1], self.upsample_s[1], self.upsample_s[1]))
-        x = self.g_4(x, motion, img)
+        x = self.g_4(x, motion, img)  # (6, 64, 16, 64, 64)
 
-        x = self.conv_img(F.leaky_relu(x, 2e-1))
+        x = self.conv_img(F.leaky_relu(x, 2e-1))  # (6, 3, 16, 64, 64)
         x = torch.tanh(x)
 
-        return x.transpose(1, 2)
+        return x.transpose(1, 2)  # (6, 16, 3, 64, 64)

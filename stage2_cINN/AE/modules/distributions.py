@@ -5,13 +5,13 @@ import numpy as np
 
 class DiagonalGaussianDistribution(object):
     def __init__(self, parameters, deterministic=False):
-        self.parameters = parameters
+        self.parameters = parameters  # (bs, 128, 1, 1)
         self.mean, self.logvar = torch.chunk(parameters, 2, dim=1)
         self.logvar = torch.clamp(self.logvar, -30.0, 10.0)
         self.deterministic = deterministic
         self.std = torch.exp(0.5 * self.logvar)
         self.var = torch.exp(self.logvar)
-        if self.deterministic:
+        if self.deterministic:  # False
             self.var = self.std = torch.zeros_like(self.mean).to(device=self.parameters.device)
 
     def sample(self):
@@ -19,10 +19,10 @@ class DiagonalGaussianDistribution(object):
         return x
 
     def kl(self, other=None):
-        if self.deterministic:
+        if self.deterministic:  # False
             return torch.Tensor([0.])
         else:
-            if other is None:
+            if other is None:  # True
                 return torch.mean(0.5 * torch.sum(torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar, dim=[1, 2, 3]))
             else:
                 return 0.5 * torch.sum(

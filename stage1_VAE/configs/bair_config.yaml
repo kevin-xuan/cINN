@@ -6,7 +6,7 @@ Decoder:
   spectral_norm: True
 
 Encoder:
-  res_type_encoder: 'resnet18'
+  res_type_encoder: "resnet18"
   deterministic: false
   use_max_pool: false
   z_dim: 64
@@ -16,7 +16,7 @@ Encoder:
 
 Discriminator_Temporal:
   eval_seq_length: 16
-  res_type_encoder: 'resnet18'
+  res_type_encoder: "resnet18"
   deterministic: false
   use_max_pool: true
   channels: [64, 64, 128, 256, 512]
@@ -32,8 +32,8 @@ Discriminator_Patch:
   spectral_norm: True
 
 Training:
-  patch_GAN: 'basic'
-  GAN_Loss: 'hinge'
+  patch_GAN: "basic"
+  GAN_Loss: "hinge"
   w_coup_s: 1
   w_coup_t: 1
   w_fmap_t: 10
@@ -51,18 +51,18 @@ Training:
   verbose_idx: 30
   weight_decay: 1e-5
   lr_gamma: 0.98
-  FVD: 'FVD'
-  savename: 'INSERT_NAME_HERE'
-  save_path: 'INSERT_PATH_HERE'
-  reload_path: ''
+  FVD: "FVD"
+  savename: "VAE" # "INSERT_NAME_HERE"
+  save_path: "run/bair" # "INSERT_PATH_HERE"
+  reload_path: ""
 
 Data:
   sequence_length: 17
   img_size: 64
-  dataset: 'BAIR'
+  dataset: "BAIR"
   reverse: False
   aug: True
-  data_path: 'INSERT_DATA_PATH_HERE'
+  data_path: "datasets/bair/processed_data/" # "INSERT_DATA_PATH_HERE"
   Augmentation:
     brightness: 0.1
     contrast: 0.1
@@ -71,6 +71,6 @@ Data:
     prob_hflip: 0.5
 
 Logging:
-  entity: 'INSERT_WANDB_NAME'
-  project: "INSERT_PROJECT_NAME"
-  mode: 'online'
+  entity: "raoxuanzzz"
+  project: "cINN"
+  mode: "offline" # 'online'

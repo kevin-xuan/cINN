@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import os, torch
+import os
+import torch
 from tqdm import tqdm
 from silence_tensorflow import silence_tensorflow
 silence_tensorflow()

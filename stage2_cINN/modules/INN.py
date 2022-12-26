@@ -9,19 +9,19 @@ class SupervisedTransformer(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
-        in_channels = kwargs["flow_in_channels"]
-        mid_channels = kwargs["flow_mid_channels"]
-        hidden_depth = kwargs["flow_hidden_depth"]
-        n_flows = kwargs["n_flows"]
-        conditioning_option = kwargs["flow_conditioning_option"]
+        in_channels = kwargs["flow_in_channels"]  # 64
+        mid_channels = kwargs["flow_mid_channels"]  # 512
+        hidden_depth = kwargs["flow_hidden_depth"]  # 2
+        n_flows = kwargs["n_flows"]  # 20
+        conditioning_option = kwargs["flow_conditioning_option"]  # None
         embedding_channels = (
             kwargs["flow_embedding_channels"]
             if "flow_embedding_channels" in kwargs
             else kwargs["flow_in_channels"]
-        )
+        )  # 64
 
-        self.control = kwargs["control"]
-        self.cond_size = 10 if self.control else 0
+        self.control = kwargs["control"]  # False
+        self.cond_size = 10 if self.control else 0  # 0
 
         self.flow = ConditionalFlow(
             in_channels=in_channels,
@@ -34,7 +34,7 @@ class SupervisedTransformer(nn.Module):
         )
 
         dic = kwargs['dic']
-        model_path = dic['model_path'] + dic['model_name'] + '/'
+        model_path = dic['model_path'] + dic['model_name'] + '/'  # './models/bair/stage2/'
         config = OmegaConf.load(model_path + 'config_stage2_AE.yaml')
         self.embedder = ResnetEncoder(config.AE).cuda()
         self.embedder.load_state_dict(torch.load(model_path + dic['checkpoint_name'] + '.pth')['state_dict'])
@@ -57,17 +57,17 @@ class SupervisedTransformer(nn.Module):
         return torch.cat((embed1, embed2, embed3), dim=1).cuda()
 
     def forward(self, input, cond, reverse=False, train=False):
-
+        # input: (bs, 64), cond: [(bs, 3, 64, 64), None], reverse: True or False
         with torch.no_grad():
-            embed = self.embedder.encode(cond[0]).mode().reshape(input.size(0), -1).detach()
+            embed = self.embedder.encode(cond[0]).mode().reshape(input.size(0), -1).detach()  # (bs, 64, 1, 1) -> (bs, 64)
             embed = torch.cat((embed, self.embed_pos(cond[1])), dim=1) if self.control else embed
 
-        if reverse:
+        if reverse:  # True or False
             return self.reverse(input, embed)
 
         out, logdet = self.flow(input, embed)
 
-        return out, logdet
+        return out, logdet  # (bs, 64, 1, 1) (bs)
 
     def reverse(self, out, cond):
         return self.flow(out, cond, reverse=True)

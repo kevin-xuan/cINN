@@ -9,11 +9,11 @@ from stage1_VAE.modules.resnet3D import Encoder
 
 class Model(torch.nn.Module):
     def __init__(self, model_path, vid_length, transfer=False):
-        super().__init__()
+        super().__init__()  # model_path='./models/bair/stage2', vid_length=16
 
         ### Load cINN config if evaluation of final model is intended
         opt = OmegaConf.load(model_path + 'config_stage2.yaml')
-        path_stage1 = opt.First_stage_model['model_path'] + opt.First_stage_model['model_name'] + '/'
+        path_stage1 = opt.First_stage_model['model_path'] + opt.First_stage_model['model_name'] + '/'  # './models/bair/stage1/'
 
         ## Load config for first stage model
         config = OmegaConf.load(path_stage1 + 'config_stage1.yaml')
@@ -24,28 +24,28 @@ class Model(torch.nn.Module):
                                                 '.pth')['state_dict'])
         _ = self.decoder.eval()
 
-        if transfer:
+        if transfer:  # False
             self.encoder = Encoder(dic=config.Encoder).cuda()
             self.encoder.load_state_dict(torch.load(path_stage1 + opt.First_stage_model['checkpoint_encoder'] +
                                                     '.pth.tar')['state_dict'])
             _ = self.encoder.eval()
 
         ## Load cINN
-        flow_mid_channels = config.Decoder["z_dim"] * opt.Flow["flow_mid_channels_factor"]
-        self.flow = INN.SupervisedTransformer(flow_in_channels=config.Decoder["z_dim"],
-                                              flow_embedding_channels=opt.Conditioning_Model['z_dim'],
-                                              n_flows=opt.Flow["n_flows"],
-                                              flow_hidden_depth=opt.Flow["flow_hidden_depth"],
-                                              flow_mid_channels=flow_mid_channels,
+        flow_mid_channels = config.Decoder["z_dim"] * opt.Flow["flow_mid_channels_factor"]  # 64 * 8 = 512
+        self.flow = INN.SupervisedTransformer(flow_in_channels=config.Decoder["z_dim"],  # 64
+                                              flow_embedding_channels=opt.Conditioning_Model['z_dim'],  # 64
+                                              n_flows=opt.Flow["n_flows"],  # 20
+                                              flow_hidden_depth=opt.Flow["flow_hidden_depth"],  # 2
+                                              flow_mid_channels=flow_mid_channels,  # 512
                                               flow_conditioning_option="None",
-                                              dic=opt.Conditioning_Model,
-                                              control=opt.Training['control']).cuda()
+                                              dic=opt.Conditioning_Model,  # * 指的是AE, stage_2的encoder
+                                              control=opt.Training['control']).cuda()  # False
         self.flow.flow.load_state_dict(torch.load(model_path + 'cINN.pth')['state_dict'])
 
         _ = self.flow.eval()
 
-        self.z_dim = config.Decoder["z_dim"]
-        self.vid_length = vid_length
+        self.z_dim = config.Decoder["z_dim"]  # 64
+        self.vid_length = vid_length  # 16
         self.config = opt
 
     def forward(self, x_0, cond=None):
@@ -62,10 +62,10 @@ class Model(torch.nn.Module):
         cond = [x_0, cond]
 
         ## Use cINN with residual and x_0 (start frame) to obtain the video representation z
-        z = self.flow(residual, cond, reverse=True).view(x_0.size(0), -1)
+        z = self.flow(residual, cond, reverse=True).view(x_0.size(0), -1)  # (bs, 64)
 
         ## Render sequence using generator/decoder
-        seq = self.decoder(x_0, z)
+        seq = self.decoder(x_0, z)   # (bs, 16, 3, 64, 64)
 
         ## Apply multiple times if longer sequence is needed
         while seq.shape[1] < self.vid_length:
