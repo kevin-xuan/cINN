@@ -18,10 +18,11 @@ First_stage_model:
 Training:
   n_epochs: 31
   lr: 1e-5
-  workers: 30 # 30
+  workers: 1 # 30
   bs: 50
   bs_eval: 10
-  control: False
+  control: True
+  control_dim: 512 # text dimension
   verbose_idx: 30
   weight_decay: 0
   gamma: 0.5
@@ -29,15 +30,15 @@ Training:
   beta1: 0.9
   beta2: 0.99
   amsgrad: True
-  savename: "cINN" #'INSERT_NAME_HERE'
-  save_path: "run/rlbench" #'INSERT_PATH_HERE'
+  savename: "cINN_simple_tasks_instruction_clip_right"
+  save_path: "run/rlbench"
 
 Data:
   sequence_length: 17
   img_size: 64
-  dataset: "RLBench" # "BAIR"
+  dataset: "RLBench"
   aug: False
-  data_path: "datasets/rlbench/packaged/dataset/" # "datasets/bair/processed_data/" # 'INSERT_DATA_PATH_HERE'
+  data_path: "datasets/rlbench/processed/simple_tasks_instruction_clip_right.hdf5" # stack_blocks.hdf5"
   Augmentation:
     brightness: 0.1
     contrast: 0.1
@@ -47,5 +48,5 @@ Data:
 
 Logging:
   entity: "raoxuanzzz"
-  project: "cINN_RLBench"
+  project: "cINN_RLBench_simple_instruction_clip_right"
   mode: "online"

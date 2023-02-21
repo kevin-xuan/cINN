@@ -45,14 +45,14 @@ Training:
   pretrain: 1
   n_epochs: 55
   lr: 2e-4
-  workers: 20
+  workers: 1 # 20
   bs: 10
   bs_eval: 10
   verbose_idx: 30
   weight_decay: 1e-5
   lr_gamma: 0.98
   FVD: "FVD"
-  savename: "VAE"
+  savename: "VAE_simple_tasks_instruction_clip_right"
   save_path: "run/rlbench"
   reload_path: ""
 
@@ -62,7 +62,7 @@ Data:
   dataset: "RLBench"
   reverse: False
   aug: True
-  data_path: "datasets/rlbench/processed/stack_blocks.hdf5" # "datasets/rlbench/packaged/dataset/"s
+  data_path: "datasets/rlbench/processed/simple_tasks_instruction_clip_right.hdf5" #  stack_blocks.hdf5" # "datasets/rlbench/packaged/dataset/"s
   Augmentation:
     brightness: 0.1
     contrast: 0.1
@@ -72,5 +72,5 @@ Data:
 
 Logging:
   entity: "raoxuanzzz"
-  project: "cINN_stage1_AVE"
+  project: "cINN_stage1_AVE_simple_instruction_clip_right"
   mode: "online" # 'online'

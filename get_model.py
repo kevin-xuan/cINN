@@ -13,7 +13,7 @@ class Model(torch.nn.Module):
 
         ### Load cINN config if evaluation of final model is intended
         opt = OmegaConf.load(model_path + 'config_stage2.yaml')
-        path_stage1 = opt.First_stage_model['model_path'] + opt.First_stage_model['model_name'] + '/'  # './models/bair/stage1/'
+        path_stage1 = opt.First_stage_model['model_path'] + opt.First_stage_model['model_name'] + '/'  # './models/rlbench/stage1/'
 
         ## Load config for first stage model
         config = OmegaConf.load(path_stage1 + 'config_stage1.yaml')
@@ -41,7 +41,8 @@ class Model(torch.nn.Module):
                                               dic=opt.Conditioning_Model,  # * 指的是AE, stage_2的encoder
                                               control=opt.Training['control']).cuda()  # False
         self.flow.flow.load_state_dict(torch.load(model_path + 'cINN.pth')['state_dict'])
-
+        if opt.Training['control']:
+            self.flow.text_encoder.load_state_dict(torch.load(model_path + 'text_encoder.pth')['state_dict'])
         _ = self.flow.eval()
 
         self.z_dim = config.Decoder["z_dim"]  # 64
@@ -72,7 +73,7 @@ class Model(torch.nn.Module):
             seq1 = self.decoder(seq[:, -1], z)
             seq = torch.cat((seq, seq1), dim=1)
 
-        return seq[:self.vid_length]
+        return seq[:, :self.vid_length]
 
     def transfer(self, seq_query, x_0):
         """

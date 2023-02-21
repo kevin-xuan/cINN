@@ -19,9 +19,9 @@ Training:
   lr: 2e-4
   bs: 30
   weight_decay: 0
-  workers: 30
+  workers: 1 # 30
   pretrain: 20
-  savename: AE
+  savename: AE_simple_tasks_instruction_clip_right
   save_path: "run/rlbench"
 
 Data:
@@ -29,7 +29,7 @@ Data:
   img_size: 64
   dataset: "RLBench"
   aug: True
-  data_path: "datasets/rlbench/processed/stack_blocks.hdf5" # "datasets/bair/processed_data/" # "INSERT_DATA_PATH_HERE"
+  data_path: "datasets/rlbench/processed/simple_tasks_instruction_clip_right.hdf5" # stack_blocks.hdf5" # "datasets/bair/processed_data/" # "INSERT_DATA_PATH_HERE"
   Augmentation:
     brightness: 0.2
     contrast: 0.2
@@ -39,6 +39,6 @@ Data:
 
 Logging:
   entity: "raoxuanzzz"
-  project: "cINN_stage2_AE"
+  project: "cINN_stage2_AE_simple_instruction_clip_right"
   mode: "online" # 'online'
 

@@ -103,7 +103,7 @@ def evaluate_FVD_prior(dloader, cINN, decoder, I3D, z_dim, opt, epoch, mode, con
             seq = file["seq"].type(torch.FloatTensor).cuda()
 
             res = torch.randn(seq.size(0), z_dim).cuda()
-            cond = [seq[:, 0]] if not control else [seq[:, 0], file["cond"]]
+            cond = [seq[:, 0]] if not control else [seq[:, 0], file["cond"].type(torch.FloatTensor).cuda()]
             z   = cINN(res, cond, reverse=True).view(seq.size(0), -1)  # inference过程为reverse
             seq_gen = decoder(seq[:, 0], z)
             seq_g.append(seq_gen.cpu())

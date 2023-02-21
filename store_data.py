@@ -15,6 +15,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     os.makedirs(args.output_dir, exist_ok=True)
+    # if not os.path.exists(args.output_dir):
+    #     os.mkdir(args.output_dir)
     f = h5py.File(os.path.join(args.output_dir, args.task + '.hdf5'), 'a')
     
     package_dir = os.listdir(args.package_dir)  # [stack_blocks+0, ...]
@@ -53,4 +55,4 @@ if __name__ == "__main__":
     print(f'\timages: {f[f"test_data"].shape}, {f[f"test_data"].dtype}')
     f.create_dataset(f'train_idx', data=train_idx)
     f.create_dataset(f'test_idx', data=test_idx)
-    
+    print('Done!')

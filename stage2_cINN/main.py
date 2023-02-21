@@ -32,7 +32,7 @@ def trainer(cINN, encoder, epoch, data_loader, logger, optimizer, loss_func, opt
         seq = file_dict["seq"].type(torch.FloatTensor).cuda()  # (bs, 17, 3, 64, 64)
 
         post, mean, *_ = encoder(seq[:, 1:].transpose(1, 2))  # post: z (bs, 64)
-        cond = [seq[:, 0]] if not opt.Training['control'] else [seq[:, 0],  file_dict["cond"]]
+        cond = [seq[:, 0]] if not opt.Training['control'] else [seq[:, 0],  file_dict["cond"].type(torch.FloatTensor).cuda()]
         gauss, logdet  = cINN(post.reshape(post.size(0), -1).detach(), cond)  # (bs, 64, 1, 1) (bs, )
         loss = loss_func(gauss, logdet, logger, mode='train')
 
@@ -61,7 +61,7 @@ def validator(cINN, encoder, epoch, data_loader, logger, loss_func, opt):
             seq = file_dict["seq"].type(torch.FloatTensor).cuda()
 
             post, mean, *_ = encoder(seq[:, 1:].transpose(1, 2))
-            cond = [seq[:, 0]] if not opt.Training['control'] else [seq[:, 0], file_dict["cond"]]
+            cond = [seq[:, 0]] if not opt.Training['control'] else [seq[:, 0], file_dict["cond"].type(torch.FloatTensor).cuda()]
             gauss, logdet = cINN(post.reshape(post.size(0), -1).detach(), cond)
             loss = loss_func(gauss, logdet, logger, mode='eval')
 
@@ -185,11 +185,14 @@ def main(opt):
 
         ## Save checkpoints
         save_dict = {'state_dict': network.flow.state_dict()}
+        save_text_dict = {'state_dict': network.text_encoder.state_dict()}
         if PFVD < best_PFVD:
             torch.save(save_dict, save_path + '/checkpoint_best_val.pth')
+            torch.save(save_text_dict, save_path + '/checkpoint_best_text_val.pth')
             best_PFVD = PFVD
 
         torch.save(save_dict, save_path + '/latest_checkpoint_cINN.pth')
+        torch.save(save_text_dict, save_path + '/latest_checkpoint_text_encoder.pth')
         
         ###### Logging Epoch Data
         epoch_time = time.time() - epoch_time

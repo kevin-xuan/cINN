@@ -21,11 +21,15 @@ class SupervisedTransformer(nn.Module):
         )  # 64
 
         self.control = kwargs["control"]  # False
-        self.cond_size = 10 if self.control else 0  # 0
+        # self.cond_size = 10 if self.control else 0  # 0
+        self.cond_size = 512 if self.control else 0  # 0  # TODo modify this 好像没用
+        self.cond_fc_size = 64 if self.control else 0  # 0  
 
         self.flow = ConditionalFlow(
             in_channels=in_channels,
-            embedding_dim=embedding_channels + self.cond_size*3,
+            # embedding_dim=embedding_channels + self.cond_size*3,
+            # embedding_dim=embedding_channels + self.cond_size,  # TODo modify this
+            embedding_dim=embedding_channels + self.cond_fc_size,  # TODo modify this
             hidden_dim=mid_channels,
             hidden_depth=hidden_depth,
             n_flows=n_flows,
@@ -39,6 +43,10 @@ class SupervisedTransformer(nn.Module):
         self.embedder = ResnetEncoder(config.AE).cuda()
         self.embedder.load_state_dict(torch.load(model_path + dic['checkpoint_name'] + '.pth')['state_dict'])
         _ = self.embedder.eval()
+        
+        # TODo: map text features to 64 dimension
+        if self.control:
+            self.text_encoder = nn.Linear(self.cond_size, self.cond_fc_size)
 
     def sample(self, shape, cond):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,8 +55,8 @@ class SupervisedTransformer(nn.Module):
         return sample
 
     def embed_pos(self, pos):
-        pos = pos * self.cond_size - 1e-4
-        embed1 = torch.zeros((pos.size(0), self.cond_size))
+        pos = pos * self.cond_size - 1e-4  # 放大10倍
+        embed1 = torch.zeros((pos.size(0), self.cond_size))  # (bs, 10)
         embed2 = torch.zeros((pos.size(0), self.cond_size))
         embed3 = torch.zeros((pos.size(0), self.cond_size))
         embed1[np.arange(embed1.size(0)), pos[:, 0].long()] = 1
@@ -60,7 +68,9 @@ class SupervisedTransformer(nn.Module):
         # input: (bs, 64), cond: [(bs, 3, 64, 64), None], reverse: True or False
         with torch.no_grad():
             embed = self.embedder.encode(cond[0]).mode().reshape(input.size(0), -1).detach()  # (bs, 64, 1, 1) -> (bs, 64)
-            embed = torch.cat((embed, self.embed_pos(cond[1])), dim=1) if self.control else embed
+            # embed = torch.cat((embed, self.embed_pos(cond[1])), dim=1) if self.control else embed
+            # embed = torch.cat((embed, cond[1]), dim=1) if self.control else embed  # TODo modify this
+            embed = torch.cat((embed, self.text_encoder(cond[1])), dim=1) if self.control else embed  # TODo modify this
 
         if reverse:  # True or False
             return self.reverse(input, embed)

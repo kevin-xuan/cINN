@@ -29,5 +29,8 @@ def get_eval_loader(name, length, path, config, control=False):
         return dataloader_landscape.Dataset(config, mode='test')
     elif name == 'DTDB' or name == 'dtdb':
         return dataloader_DTDB.Dataset(config, mode='test')
+    elif name == 'RLBench' or name == 'rlbench':
+        return dataloader_RLBench.Dataset(config, mode='test')
+        # return dataloader_RLBench.Dataset(config, mode='train')
     else:
         raise NotImplementedError(f'Corresponding dataloader to dataset {name} not implemented')
